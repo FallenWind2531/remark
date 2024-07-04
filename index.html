@@ -8,21 +8,29 @@
     </head>
     <body>
         <div class="section">
-            <div clas="box1">
+            <div class="box1">
                 <h3 class="content">user name</h3>
             </div>
             <div class="box1">
-                <input></input>
+                <input id="usernameInput" type="text" />
             </div>
-            <div clas="box1">
+            <div class="box1">
                 <h3 class="content">comment content</h3>
             </div>
             <div class="box1">
-                <input></input>
+                <input id="commentInput" type="text" />
             </div>
             <div class="box1">
-                <button class="sub">提交</button>
+                <button id="submitBtn" class="sub">提交</button>
             </div>
         </div>
+        <div class="commentSection">
+        </div>
+        <div class="pageSection">
+            <button id="prevBtn" class="pageBtn">上一页</button>
+            <span id="pageInfo" class="pageNum">1/1</span>
+            <button id="nextBtn" class="pageBtn">下一页</button>
+        </div>
+        <script src="script.js"></script>
     </body>
 </html>
