@@ -2,16 +2,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const comments = []; // 存储所有评论
     let currentPage = 1; // 当前页码
     const commentsPerPage = 5; // 每页显示的评论数
+    const maxPage = 1;
+
+    /*setInterval(() => {
+        fetchComments();
+    }, 5000); // 每5秒更新一次评论*/
+
+    // 获取评论
+    function fetchComments() {
+        fetch(`http://localhost:8080/comment/get?page${currentPage}=&size=${commentsPerPage}`) // 假设每次获取100条评论
+            .then(response => response.json())
+            .then(data => {
+                comments = data.data.comments; // 更新评论数组
+                maxPage = Math.ceil(data.data.total / commentsPerPage);
+                document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
+                renderComments(); // 重新渲染评论
+            });
+    }
 
     // 监听提交按钮的点击事件
     document.getElementById('submitBtn').addEventListener('click', function() {
         const username = document.getElementById('usernameInput').value;
         const comment = document.getElementById('commentInput').value;
         if (username && comment) {
-            comments.push({ username, comment }); // 将评论添加到数组
-            renderComments(); // 渲染评论
-            const maxPage = Math.ceil(comments.length / commentsPerPage);
-            document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
+            fetch('http://localhost:8080/comment/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: username, content: comment }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                fetchComments(); // 重新获取评论
+            });
             usernameInput.value = '';
             commentInput.value = '';
         }
@@ -22,8 +46,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderComments() {
         const commentSection = document.querySelector('.commentSection');
         commentSection.innerHTML = ''; // 清空当前评论
-        const startIndex = (currentPage - 1) * commentsPerPage;
-        const endIndex = Math.min(startIndex + commentsPerPage, comments.length);
+        const startIndex = 0
+        const endIndex = comments.length;
 
         for (let i = startIndex; i < endIndex; i++) {
             const commentDiv = document.createElement('div');
@@ -33,11 +57,13 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteBtn.textContent = '删除';
             deleteBtn.classList.add('del');
             deleteBtn.onclick = function() {
-                comments.splice(i, 1);
-                renderComments();
-                let maxPage = Math.ceil(comments.length / commentsPerPage);
-                maxPage = maxPage === 0 ? 1 : maxPage;
-                document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
+                fetch(`http://localhost:8080/comment/delete?id=${comments[i].id}`, {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    fetchComments(); // 重新获取评论
+                });
             };
             commentDiv.appendChild(deleteBtn);
             commentSection.appendChild(commentDiv);
@@ -46,11 +72,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.body.addEventListener('click', function(next) {
         if (next.target.id === 'nextBtn') {
-            const maxPage = Math.ceil(comments.length / commentsPerPage);
             if (currentPage < maxPage) {
                 currentPage++;
-                renderComments();
-                document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
+                fetchComments();
             }
         }
     });
@@ -59,10 +83,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (prev.target.id === 'prevBtn') {
             if (currentPage > 1) {
                 currentPage--;
-                renderComments();
-                const maxPage = Math.ceil(comments.length / commentsPerPage);
-                document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
+                fetchComments();
             }
         }
     });
+
+    fetchComments();
 });
