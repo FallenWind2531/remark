@@ -1,10 +1,13 @@
 package main
 
 import (
+    "log"
     "encoding/json"
     "net/http"
 	"strconv"
-	"sync"
+    "gorm.io/gorm"
+    "gorm.io/driver/sqlite"
+    "github.com/spf13/viper"
 )
 
 type ApiResponse struct {
@@ -14,14 +17,34 @@ type ApiResponse struct {
 }
 
 type Comment struct {
-    ID      int    `json:"id"`
+    ID      uint   `gorm:"primaryKey" json:"id"`
     Name    string `json:"name"`
     Comment string `json:"content"`
 }
 
-var mutex = &sync.RWMutex{}
-var comments []Comment
-var incrementID int = 1
+var db *gorm.DB
+var err error
+
+func init() {
+    viper.SetConfigName("config")
+    viper.AddConfigPath(".")
+    if err := viper.ReadInConfig(); err != nil {
+        if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+            log.Println("no such config file")
+        } else {
+            log.Println("read config error")
+        }
+        log.Fatal(err)
+    }
+}
+
+func initDB() {
+    db, err = gorm.Open(sqlite.Open(viper.GetString(`database.path`)), &gorm.Config{})
+    if err != nil {
+        panic("failed to connect database")
+    }
+    db.AutoMigrate(&Comment{})
+}
 
 func addCommentHandler(w http.ResponseWriter, r *http.Request) {
     if r.Method != "POST" {
@@ -39,12 +62,11 @@ func addCommentHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // 添加评论到comments切片中
-    mutex.Lock()
-    newComment.ID = incrementID
-    incrementID++
-    comments = append(comments, newComment)
-    mutex.Unlock()
+    result := db.Create(&newComment)
+    if result.Error != nil {
+        sendResponse(w, http.StatusInternalServerError, "添加评论失败", nil)
+        return
+    }
 
     // 返回成功的响应
     sendResponse(w, http.StatusOK, "评论添加成功", newComment)
@@ -71,28 +93,20 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     // 删除具有给定ID的评论
-    deleted := deleteCommentByID(id)
-    if !deleted {
+    var comment Comment
+    db.First(&comment, id)
+    if comment.ID == 0 {
         sendResponse(w, http.StatusNotFound, "未找到指定ID的评论", nil)
         return
     }
 
-    // 发送成功响应
-    sendResponse(w, http.StatusOK, "评论删除成功", nil)
-}
-
-// deleteCommentByID 在comments切片中查找并删除具有给定ID的评论
-// 如果找到并删除了评论，则返回true；否则返回false
-func deleteCommentByID(id int) bool {
-    mutex.Lock()
-    defer mutex.Unlock()
-    for i, comment := range comments {
-        if comment.ID == id {
-            comments = append(comments[:i], comments[i+1:]...)
-            return true
-        }
+    result := db.Delete(&comment)
+    if result.Error != nil {
+        sendResponse(w, http.StatusInternalServerError, "删除评论失败", nil)
+        return
     }
-    return false
+
+    sendResponse(w, http.StatusOK, "评论删除成功", nil)
 }
 
 func getCommentHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,33 +132,30 @@ func getCommentHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	mutex.Lock()
-    defer mutex.Unlock()
+    var total int64
+    db.Model(&Comment{}).Count(&total)
 
-	if size == -1 {
-		responseData := map[string]interface{}{
-			"total":    len(comments),
-			"comments": comments,
-		}
-        sendResponse(w, http.StatusOK, "获取评论成功", responseData)
-        return
+	var comments []Comment
+
+    if size == -1 {
+        // 如果size为-1，获取所有评论，不使用分页
+        result := db.Find(&comments)
+        if result.Error != nil {
+            sendResponse(w, http.StatusInternalServerError, "获取评论失败", nil)
+            return
+        }
+    } else {
+        offset := (page - 1) * size
+        result := db.Offset(offset).Limit(size).Find(&comments)
+        if result.Error != nil {
+            sendResponse(w, http.StatusInternalServerError, "获取评论失败", nil)
+            return
+        }
     }
 
-    // 计算当前页的评论范围
-    start := (page - 1) * size
-    end := start + size
-    if start >= len(comments) {
-        sendResponse(w, http.StatusOK, "超出评论范围", map[string]interface{}{"total": len(comments), "comments": []Comment{}})
-        return
-    }
-    if end > len(comments) {
-        end = len(comments)
-    }
-
-    // 构造响应体
     responseData := map[string]interface{}{
-        "total":    len(comments),
-        "comments": comments[start:end],
+        "total":    total,
+        "comments": comments,
     }
 
     sendResponse(w, http.StatusOK, "获取评论成功", responseData)
@@ -180,6 +191,8 @@ func enableCORS(next http.Handler) http.Handler {
 }
 
 func main() {
+    initDB()
+
     mux := http.NewServeMux()
     
     mux.HandleFunc("/comment/get", getCommentHandler)
@@ -188,5 +201,5 @@ func main() {
 
     handler := enableCORS(mux)
 
-    http.ListenAndServe(":8080", handler)
+    http.ListenAndServe(viper.GetString(`server.port`), handler)
 }
