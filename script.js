@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let comments = []; // 存储所有评论
+    let comments = [];
     let currentPage = 1; // 当前页码
     const commentsPerPage = 5; // 每页显示的评论数
     let maxPage = 1;
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 获取评论
     function fetchComments() {
-        fetch(`http://localhost:8080/comment/get?page=${currentPage}&size=${commentsPerPage}`) // 假设每次获取100条评论
+        fetch(`http://localhost:8080/comment/get?page=${currentPage}&size=${commentsPerPage}`) 
             .then(response => response.json())
             .then(data => {
                 comments = data.data.comments; // 更新评论数组
