@@ -1,3 +1,10 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "微软雅黑";
+    background: white;
+}
+
 .section {
     flex-direction: column;
     width: 60%;
@@ -59,7 +66,7 @@ input {
 
 .comment:hover {
     border-color: red;
-    background: #e6eef4;
+    background: #e5e8eb;
     box-shadow:  20px 20px 60px #c4cacf,
                  -20px -20px 60px #ffffff;
 }
@@ -85,4 +92,25 @@ input {
     font-weight: bold;
     height: 35px;
     line-height: 35px;
+}
+
+.upper {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.username {
+    font-size: 20px;
+    font-family: "微软雅黑";
+    font-weight: bold;
+    margin-left: 0px;
+}
+
+.commentId {
+    font-size: 20px;
+    font-family: "微软雅黑";
+    font-weight: bold;
+    margin-right: 30px;
+    color: #969a9e;
 }

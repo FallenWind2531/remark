@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const commentsPerPage = 5; // 每页显示的评论数
     let maxPage = 1;
 
-    /*setInterval(() => {
+    setInterval(() => {
         fetchComments();
-    }, 5000); // 每5秒更新一次评论*/
+    }, 5000); // 每5秒更新一次评论
 
     // 获取评论
     function fetchComments() {
@@ -55,7 +55,11 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = startIndex; i < endIndex; i++) {
             const commentDiv = document.createElement('div');
             commentDiv.classList.add('comment');
-            commentDiv.innerHTML = `<h3>${comments[i].name}</h3><p>${comments[i].content}</p>`;
+            commentDiv.innerHTML = `<div class="upper">
+                                        <span class="username">${comments[i].name}</span>
+                                        <span class="commentId">${comments[i].id}楼</span>
+                                    </div>
+                                    <p>${comments[i].content}</p>`;
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = '删除';
             deleteBtn.classList.add('del');
