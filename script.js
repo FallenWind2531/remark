@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const comments = []; // 存储所有评论
+    let comments = []; // 存储所有评论
     let currentPage = 1; // 当前页码
     const commentsPerPage = 5; // 每页显示的评论数
-    const maxPage = 1;
+    let maxPage = 1;
 
     /*setInterval(() => {
         fetchComments();
@@ -10,11 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 获取评论
     function fetchComments() {
-        fetch(`http://localhost:8080/comment/get?page${currentPage}=&size=${commentsPerPage}`) // 假设每次获取100条评论
+        fetch(`http://localhost:8080/comment/get?page=${currentPage}&size=${commentsPerPage}`) // 假设每次获取100条评论
             .then(response => response.json())
             .then(data => {
                 comments = data.data.comments; // 更新评论数组
                 maxPage = Math.ceil(data.data.total / commentsPerPage);
+                if (maxPage === 0) {
+                    maxPage = 1;
+                }
                 document.getElementById('pageInfo').textContent = `${currentPage}/${maxPage}`;
                 renderComments(); // 重新渲染评论
             });
@@ -52,19 +55,21 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = startIndex; i < endIndex; i++) {
             const commentDiv = document.createElement('div');
             commentDiv.classList.add('comment');
-            commentDiv.innerHTML = `<h3>${comments[i].username}</h3><p>${comments[i].comment}</p>`;
+            commentDiv.innerHTML = `<h3>${comments[i].name}</h3><p>${comments[i].content}</p>`;
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = '删除';
             deleteBtn.classList.add('del');
-            deleteBtn.onclick = function() {
-                fetch(`http://localhost:8080/comment/delete?id=${comments[i].id}`, {
-                    method: 'POST',
-                })
-                .then(response => response.json())
-                .then(data => {
-                    fetchComments(); // 重新获取评论
-                });
-            };
+            (function(index) {
+                deleteBtn.onclick = function() {
+                    fetch(`http://localhost:8080/comment/delete?id=${comments[index].id}`, {
+                        method: 'POST',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        fetchComments(); // 重新获取评论
+                    });
+                };
+            })(i);
             commentDiv.appendChild(deleteBtn);
             commentSection.appendChild(commentDiv);
         }

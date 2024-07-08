@@ -161,9 +161,32 @@ func sendResponse(w http.ResponseWriter, code int, message string, data interfac
     json.NewEncoder(w).Encode(response)
 }
 
+func enableCORS(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // 允许来自任何源的请求
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        // 允许预检请求中的方法
+        w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        // 允许预检请求中的头信息
+        w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+        // 如果是预检请求，直接返回
+        if r.Method == "OPTIONS" {
+            return
+        }
+
+        next.ServeHTTP(w, r)
+    })
+}
+
 func main() {
-    http.HandleFunc("/comment/get", getCommentHandler)
-    http.HandleFunc("/comment/add", addCommentHandler)
-	http.HandleFunc("/comment/delete", deleteCommentHandler)
-    http.ListenAndServe(":8080", nil)
+    mux := http.NewServeMux()
+    
+    mux.HandleFunc("/comment/get", getCommentHandler)
+    mux.HandleFunc("/comment/add", addCommentHandler)
+	mux.HandleFunc("/comment/delete", deleteCommentHandler)
+
+    handler := enableCORS(mux)
+
+    http.ListenAndServe(":8080", handler)
 }
